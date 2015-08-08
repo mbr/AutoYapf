@@ -1,5 +1,9 @@
-import sublime, sublime_plugin
-import os, subprocess, tempfile
+import os
+import subprocess
+import tempfile
+
+import sublime
+import sublime_plugin
 
 
 class EventListener(sublime_plugin.EventListener):
