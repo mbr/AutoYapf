@@ -41,6 +41,7 @@ class AutoYapfCommand(sublime_plugin.TextCommand):
         with temporary_file(suffix='.py') as fp:
             name = fp.name
             fp.write(bytes)
+            fp.close()
 
             # run yapf
             args = ['yapf', '--verify', '--in-place', name]
