@@ -47,10 +47,7 @@ class AutoYapfCommand(sublime_plugin.TextCommand):
             args = ['yapf', '--verify', '--in-place', name]
             env = os.environ.copy()
             env['LANG'] = 'utf-8'
-            popen = subprocess.Popen(args,
-                                     env=env,
-                                     stderr=subprocess.PIPE,
-                                     shell=True)
+            popen = subprocess.Popen(args, env=env, stderr=subprocess.PIPE)
             _, stderr = popen.communicate()
             if popen.returncode:
                 error_lines = stderr.decode('utf-8').strip().replace(
