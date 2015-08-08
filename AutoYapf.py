@@ -19,7 +19,6 @@ class AutoYapfCommand(sublime_plugin.TextCommand):
         selection = sublime.Region(0, self.view.size())
         bytes = self.view.substr(selection).encode('utf-8')
 
-        # dump source into temporary file
         args = ['yapf', '--verify']
         env = os.environ.copy()
         env['LANG'] = 'utf-8'
