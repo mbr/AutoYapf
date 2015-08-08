@@ -1,9 +1,26 @@
+from contextlib import contextmanager
 import os
 import subprocess
 import tempfile
 
 import sublime
 import sublime_plugin
+
+
+@contextmanager
+def temporary_file(*args, **kwargs):
+    ignore_unlinked = kwargs.pop('ignore_unliked', False)
+
+    fp = tempfile.NamedTemporaryFile(*args, delete=False, **kwargs)
+    try:
+        yield fp
+    finally:
+        try:
+            os.unlink(fp.name)
+        except OSError as e:
+            # if the file does not exist anymore, ignore
+            if e.errno != 2 or ignore_unlinked is False:
+                raise
 
 
 class EventListener(sublime_plugin.EventListener):
@@ -21,11 +38,10 @@ class AutoYapfCommand(sublime_plugin.TextCommand):
         bytes = self.view.substr(selection).encode('utf-8')
 
         # dump source into temporary file
-        with tempfile.NamedTemporaryFile(suffix=".py", delete=False) as fp:
+        with temporary_file(suffix='.py') as fp:
             name = fp.name
             fp.write(bytes)
 
-        try:
             # run yapf
             args = ['yapf', '--verify', '--in-place', name]
             env = os.environ.copy()
@@ -46,8 +62,6 @@ class AutoYapfCommand(sublime_plugin.TextCommand):
             # read back in
             new_text = open(name, 'rb').read().decode('utf-8').replace('\r\n',
                                                                        '\n')
-        finally:
-            os.unlink(name)
 
         # replace it
         self.view.replace(edit, selection, new_text)
