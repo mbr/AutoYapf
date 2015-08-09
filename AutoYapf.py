@@ -1,5 +1,5 @@
 import sublime, sublime_plugin
-import os, subprocess, tempfile
+import os, subprocess, sys, tempfile
 
 
 class EventListener(sublime_plugin.EventListener):
@@ -20,12 +20,22 @@ class AutoYapfCommand(sublime_plugin.TextCommand):
         env = os.environ.copy()
         env['LANG'] = 'utf-8'
 
+        si = None
+
+        if sys.platform in ('win32', 'cygwin'):
+            si = subprocess.STARTUPINFO()
+            si.dwFlags = (
+                subprocess.CREATE_NEW_CONSOLE | subprocess.STARTF_USESHOWWINDOW
+            )
+            si.wShowWindow = subprocess.SW_HIDE
+
         popen = subprocess.Popen(
             args,
             env=env,
             stdout=subprocess.PIPE,
             stderr=subprocess.PIPE,
-            stdin=subprocess.PIPE)
+            stdin=subprocess.PIPE,
+            startupinfo=si)
         yapf_result, stderr = popen.communicate(bytes)
 
         if popen.returncode:
