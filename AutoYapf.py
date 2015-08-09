@@ -1,5 +1,5 @@
 import sublime, sublime_plugin
-import os, subprocess, sys, tempfile
+import os, subprocess, sys
 
 
 class EventListener(sublime_plugin.EventListener):
@@ -13,31 +13,28 @@ class AutoYapfCommand(sublime_plugin.TextCommand):
         return is_python
 
     def run(self, edit):
+        # determine current text
         selection = sublime.Region(0, self.view.size())
-        bytes = self.view.substr(selection).encode('utf-8')
+        current_text = self.view.substr(selection)
 
-        args = ['yapf', '--verify']
+        # run yapf
+        cmd = ['yapf', '--verify']
         env = os.environ.copy()
         env['LANG'] = 'utf-8'
-
-        si = None
-
+        startupinfo = None
         if sys.platform in ('win32', 'cygwin'):
-            si = subprocess.STARTUPINFO()
-            si.dwFlags = (
-                subprocess.CREATE_NEW_CONSOLE | subprocess.STARTF_USESHOWWINDOW
-            )
-            si.wShowWindow = subprocess.SW_HIDE
-
+            startupinfo = subprocess.STARTUPINFO()
+            startupinfo.dwFlags = subprocess.CREATE_NEW_CONSOLE | subprocess.STARTF_USESHOWWINDOW
+            startupinfo.wShowWindow = subprocess.SW_HIDE
         popen = subprocess.Popen(
-            args,
+            cmd,
             env=env,
             stdout=subprocess.PIPE,
             stderr=subprocess.PIPE,
             stdin=subprocess.PIPE,
-            startupinfo=si)
-        yapf_result, stderr = popen.communicate(bytes)
+            startupinfo=startupinfo)
 
+        stdout, stderr = popen.communicate(current_text.encode('utf-8'))
         if popen.returncode:
             error_lines = stderr.decode('utf-8').strip().replace(
                 '\r\n', '\n').split('\n')
@@ -46,7 +43,6 @@ class AutoYapfCommand(sublime_plugin.TextCommand):
             sublime.status_message('yapf: %s @ %s' % (msg, loc))
             return
 
-        new_text = yapf_result.decode('utf-8').replace('\r\n', '\n')
-
-        # replace it
+        # replace current by new text
+        new_text = stdout.decode('utf-8').replace('\r\n', '\n')
         self.view.replace(edit, selection, new_text)
