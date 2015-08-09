@@ -1,5 +1,5 @@
 import sublime, sublime_plugin
-import os, subprocess, tempfile
+import os, subprocess, sys, tempfile
 
 
 class EventListener(sublime_plugin.EventListener):
@@ -16,34 +16,37 @@ class AutoYapfCommand(sublime_plugin.TextCommand):
         selection = sublime.Region(0, self.view.size())
         bytes = self.view.substr(selection).encode('utf-8')
 
-        # dump source into temporary file
-        with tempfile.NamedTemporaryFile(suffix=".py", delete=False) as fp:
-            name = fp.name
-            fp.write(bytes)
+        args = ['yapf', '--verify']
+        env = os.environ.copy()
+        env['LANG'] = 'utf-8'
 
-        try:
-            # run yapf
-            args = ['yapf', '--verify', '--in-place', name]
-            env = os.environ.copy()
-            env['LANG'] = 'utf-8'
-            popen = subprocess.Popen(args,
-                                     env=env,
-                                     stderr=subprocess.PIPE,
-                                     shell=True)
-            _, stderr = popen.communicate()
-            if popen.returncode:
-                error_lines = stderr.decode('utf-8').strip().replace(
-                    '\r\n', '\n').split('\n')
-                loc, msg = error_lines[-4], error_lines[-1]
-                loc = loc[loc.find('line'):]
-                sublime.status_message('yapf: %s @ %s' % (msg, loc))
-                return
+        si = None
 
-            # read back in
-            new_text = open(name, 'rb').read().decode('utf-8').replace('\r\n',
-                                                                       '\n')
-        finally:
-            os.unlink(name)
+        if sys.platform in ('win32', 'cygwin'):
+            si = subprocess.STARTUPINFO()
+            si.dwFlags = (
+                subprocess.CREATE_NEW_CONSOLE | subprocess.STARTF_USESHOWWINDOW
+            )
+            si.wShowWindow = subprocess.SW_HIDE
+
+        popen = subprocess.Popen(
+            args,
+            env=env,
+            stdout=subprocess.PIPE,
+            stderr=subprocess.PIPE,
+            stdin=subprocess.PIPE,
+            startupinfo=si)
+        yapf_result, stderr = popen.communicate(bytes)
+
+        if popen.returncode:
+            error_lines = stderr.decode('utf-8').strip().replace(
+                '\r\n', '\n').split('\n')
+            loc, msg = error_lines[-4], error_lines[-1]
+            loc = loc[loc.find('line'):]
+            sublime.status_message('yapf: %s @ %s' % (msg, loc))
+            return
+
+        new_text = yapf_result.decode('utf-8').replace('\r\n', '\n')
 
         # replace it
         self.view.replace(edit, selection, new_text)
