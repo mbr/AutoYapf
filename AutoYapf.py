@@ -35,7 +35,9 @@ class AutoYapfCommand(sublime_plugin.TextCommand):
             startupinfo=startupinfo)
 
         stdout, stderr = popen.communicate(current_text.encode('utf-8'))
-        if popen.returncode:
+
+        # since yapf>=0.3: 0 unchanged, 2 changed
+        if popen.returncode not in (0, 2):
             error_lines = stderr.decode('utf-8').strip().replace(
                 '\r\n', '\n').split('\n')
             loc, msg = error_lines[-4], error_lines[-1]
