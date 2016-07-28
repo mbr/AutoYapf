@@ -16,7 +16,41 @@ def popen_wincompat(*args, **kwargs):
                                | subprocess.STARTF_USESHOWWINDOW)
         startupinfo.wShowWindow = subprocess.SW_HIDE
 
+    # set language/encoding to utf8
+    env = kwargs.pop('env', {}) or os.environ.copy()
+    env['LANG'] = 'utf-8'
+
     return subprocess.Popen(*args, startupinfo=startupinfo, **kwargs)
+
+
+class Formatter(object):
+    def format_text(self, text):
+        raise NotImplementedError
+
+
+class YapfFormatter(Formatter):
+    def format_text(self, text):
+        cmd = ['yapf', '--verify']
+
+        popen = popen_wincompat(cmd,
+                                stdout=subprocess.PIPE,
+                                stderr=subprocess.PIPE,
+                                stdin=subprocess.PIPE)
+
+        stdout, stderr = popen.communicate(text.encode('utf-8'))
+
+        # since yapf>=0.3: 0 unchanged, 2 changed
+        if popen.returncode not in (0, 2):
+            error_lines = stderr.decode('utf-8').strip().replace(
+                '\r\n', '\n').split('\n')
+            loc, msg = error_lines[-4], error_lines[-1]
+            loc = loc[loc.find('line'):]
+            sublime.status_message('yapf: {} @ {}'.format(msg, loc))
+            return
+
+        new_text = stdout.decode('utf-8').replace('\r\n', '\n')
+
+        return new_text
 
 
 class EventListener(sublime_plugin.EventListener):
@@ -33,32 +67,7 @@ class AutoYapfCommand(sublime_plugin.TextCommand):
         # determine current text
         selection = sublime.Region(0, self.view.size())
 
+        formatter = YapfFormatter()
         current_text = self.view.substr(selection)
-
-        # set language to utf8
-        env = os.environ.copy()
-        env['LANG'] = 'utf-8'
-
-        # run yapf
-        cmd = ['yapf', '--verify']
-
-        popen = popen_wincompat(cmd,
-                                env=env,
-                                stdout=subprocess.PIPE,
-                                stderr=subprocess.PIPE,
-                                stdin=subprocess.PIPE)
-
-        stdout, stderr = popen.communicate(current_text.encode('utf-8'))
-
-        # since yapf>=0.3: 0 unchanged, 2 changed
-        if popen.returncode not in (0, 2):
-            error_lines = stderr.decode('utf-8').strip().replace(
-                '\r\n', '\n').split('\n')
-            loc, msg = error_lines[-4], error_lines[-1]
-            loc = loc[loc.find('line'):]
-            sublime.status_message('yapf: %s @ %s' % (msg, loc))
-            return
-
-        # replace current by new text
-        new_text = stdout.decode('utf-8').replace('\r\n', '\n')
+        new_text = formatter.format_text(current_text)
         self.view.replace(edit, selection, new_text)
