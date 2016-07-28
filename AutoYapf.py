@@ -5,6 +5,16 @@ import sublime
 import sublime_plugin
 
 
+def popen_wincompat(*args, **kwargs):
+    startupinfo = None
+    if sys.platform in ('win32', 'cygwin'):
+        startupinfo = subprocess.STARTUPINFO()
+        startupinfo.dwFlags = subprocess.CREATE_NEW_CONSOLE | subprocess.STARTF_USESHOWWINDOW
+        startupinfo.wShowWindow = subprocess.SW_HIDE
+
+    return subprocess.Popen(*args, startupinfo=startupinfo, **kwargs)
+
+
 class EventListener(sublime_plugin.EventListener):
     def on_pre_save(self, view):
         view.run_command('auto_yapf')
@@ -16,22 +26,28 @@ class AutoYapfCommand(sublime_plugin.TextCommand):
         return is_python
 
     def run(self, edit):
+        # determine current text
         selection = sublime.Region(0, self.view.size())
-        bytes = self.view.substr(selection).encode('utf-8')
 
-        args = ['yapf', '--verify']
+        current_text = self.view.substr(selection)
+
+        # set language to utf8
         env = os.environ.copy()
         env['LANG'] = 'utf-8'
 
-        popen = subprocess.Popen(
-            args,
-            env=env,
-            stdout=subprocess.PIPE,
-            stderr=subprocess.PIPE,
-            stdin=subprocess.PIPE)
-        yapf_result, stderr = popen.communicate(bytes)
+        # run yapf
+        cmd = ['yapf', '--verify']
 
-        if popen.returncode:
+        popen = popen_wincompat(cmd,
+                                env=env,
+                                stdout=subprocess.PIPE,
+                                stderr=subprocess.PIPE,
+                                stdin=subprocess.PIPE)
+
+        stdout, stderr = popen.communicate(current_text.encode('utf-8'))
+
+        # since yapf>=0.3: 0 unchanged, 2 changed
+        if popen.returncode not in (0, 2):
             error_lines = stderr.decode('utf-8').strip().replace(
                 '\r\n', '\n').split('\n')
             loc, msg = error_lines[-4], error_lines[-1]
@@ -39,7 +55,6 @@ class AutoYapfCommand(sublime_plugin.TextCommand):
             sublime.status_message('yapf: %s @ %s' % (msg, loc))
             return
 
-        new_text = yapf_result.decode('utf-8').replace('\r\n', '\n')
-
-        # replace it
+        # replace current by new text
+        new_text = stdout.decode('utf-8').replace('\r\n', '\n')
         self.view.replace(edit, selection, new_text)
