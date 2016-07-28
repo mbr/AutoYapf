@@ -8,34 +8,34 @@ import sys
 # FIXME: rename, as autoyapf is no longer accurate
 
 
-def popen_wincompat(*args, **kwargs):
-    startupinfo = None
-    if sys.platform in ('win32', 'cygwin'):
-        startupinfo = subprocess.STARTUPINFO()
-        startupinfo.dwFlags = (subprocess.CREATE_NEW_CONSOLE
-                               | subprocess.STARTF_USESHOWWINDOW)
-        startupinfo.wShowWindow = subprocess.SW_HIDE
-
-    # set language/encoding to utf8
-    env = kwargs.pop('env', {}) or os.environ.copy()
-    env['LANG'] = 'utf-8'
-
-    return subprocess.Popen(*args, startupinfo=startupinfo, **kwargs)
-
-
 class Formatter(object):
     def format_text(self, text):
         raise NotImplementedError
+
+    @classmethod
+    def popen(cls, *args, **kwargs):
+        startupinfo = None
+        if sys.platform in ('win32', 'cygwin'):
+            startupinfo = subprocess.STARTUPINFO()
+            startupinfo.dwFlags = (subprocess.CREATE_NEW_CONSOLE
+                                   | subprocess.STARTF_USESHOWWINDOW)
+            startupinfo.wShowWindow = subprocess.SW_HIDE
+
+        # set language/encoding to utf8
+        env = kwargs.pop('env', {}) or os.environ.copy()
+        env['LANG'] = 'utf-8'
+
+        return subprocess.Popen(*args, startupinfo=startupinfo, **kwargs)
 
 
 class YapfFormatter(Formatter):
     def format_text(self, text):
         cmd = ['yapf', '--verify']
 
-        popen = popen_wincompat(cmd,
-                                stdout=subprocess.PIPE,
-                                stderr=subprocess.PIPE,
-                                stdin=subprocess.PIPE)
+        popen = self.popen(cmd,
+                           stdout=subprocess.PIPE,
+                           stderr=subprocess.PIPE,
+                           stdin=subprocess.PIPE)
 
         stdout, stderr = popen.communicate(text.encode('utf-8'))
 
