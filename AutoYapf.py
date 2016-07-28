@@ -8,8 +8,12 @@ import sublime_plugin
 # FIXME: rename, as autoyapf is no longer accurate
 
 
+class FormatterError(Exception):
+    pass
+
+
 class Formatter(object):
-    def format_text(self, text):
+    def format_text(self, text, target):
         raise NotImplementedError
 
     @classmethod
@@ -29,7 +33,7 @@ class Formatter(object):
 
 
 class YapfFormatter(Formatter):
-    def format_text(self, text):
+    def format_text(self, text, target):
         cmd = ['yapf', '--verify']
 
         popen = self.popen(cmd,
@@ -45,8 +49,7 @@ class YapfFormatter(Formatter):
                 '\r\n', '\n').split('\n')
             loc, msg = error_lines[-4], error_lines[-1]
             loc = loc[loc.find('line'):]
-            sublime.status_message('yapf: {} @ {}'.format(msg, loc))
-            return
+            raise FormatterError('yapf: {} @ {}'.format(msg, loc))
 
         new_text = stdout.decode('utf-8').replace('\r\n', '\n')
 
@@ -54,18 +57,18 @@ class YapfFormatter(Formatter):
 
 
 class RustFmtFormatter(Formatter):
-    def format_text(self, text):
+    def format_text(self, text, target):
         cmd = [os.path.expanduser('~/.cargo/bin/rustfmt'), '--skip-children']
 
         popen = self.popen(cmd,
+                           cwd=os.path.dirname(target),
                            stdout=subprocess.PIPE,
                            stderr=subprocess.PIPE,
                            stdin=subprocess.PIPE)
 
         stdout, stderr = popen.communicate(text.encode('utf8'))
         if popen.returncode != 0:
-            sublime.status_message('rustfmt failed')
-            return
+            raise FormatterError('rustfmt failed: {}'.format(stderr))
 
         new_text = stdout.decode('utf-8').replace('\r\n', '\n')
 
@@ -88,6 +91,8 @@ class AutoYapfCommand(sublime_plugin.TextCommand):
         return self.guess_lang() is not None
 
     def run(self, edit):
+        fn = self.view.file_name()
+
         # determine current text
         selection = sublime.Region(0, self.view.size())
 
@@ -95,8 +100,12 @@ class AutoYapfCommand(sublime_plugin.TextCommand):
             'python': YapfFormatter,
             'rust': RustFmtFormatter,
         }[self.guess_lang()]()
-        current_text = self.view.substr(selection)
-        new_text = formatter.format_text(current_text)
 
-        if new_text is not None:
-            self.view.replace(edit, selection, new_text)
+        current_text = self.view.substr(selection)
+        try:
+            new_text = formatter.format_text(current_text, fn)
+        except FormatterError as e:
+            print('AutoYapf: Formatter failed: {}'.format(e))
+            sublime.status_message(str(e))
+
+        self.view.replace(edit, selection, new_text)
