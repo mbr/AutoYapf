@@ -1,9 +1,9 @@
 import os
 import subprocess
+import sys
 
 import sublime
 import sublime_plugin
-import sys
 
 # FIXME: rename, as autoyapf is no longer accurate
 
