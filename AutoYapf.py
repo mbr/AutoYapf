@@ -3,13 +3,15 @@ import subprocess
 
 import sublime
 import sublime_plugin
+import sys
 
 
 def popen_wincompat(*args, **kwargs):
     startupinfo = None
     if sys.platform in ('win32', 'cygwin'):
         startupinfo = subprocess.STARTUPINFO()
-        startupinfo.dwFlags = subprocess.CREATE_NEW_CONSOLE | subprocess.STARTF_USESHOWWINDOW
+        startupinfo.dwFlags = (subprocess.CREATE_NEW_CONSOLE |
+                               subprocess.STARTF_USESHOWWINDOW)
         startupinfo.wShowWindow = subprocess.SW_HIDE
 
     return subprocess.Popen(*args, startupinfo=startupinfo, **kwargs)
