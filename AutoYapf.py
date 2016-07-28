@@ -53,6 +53,25 @@ class YapfFormatter(Formatter):
         return new_text
 
 
+class RustFmtFormatter(Formatter):
+    def format_text(self, text):
+        cmd = [os.path.expanduser('~/.cargo/bin/rustfmt'), '--skip-children']
+
+        popen = self.popen(cmd,
+                           stdout=subprocess.PIPE,
+                           stderr=subprocess.PIPE,
+                           stdin=subprocess.PIPE)
+
+        stdout, stderr = popen.communicate(text.encode('utf8'))
+        if popen.returncode != 0:
+            sublime.status_message('rustfmt failed')
+            return
+
+        new_text = stdout.decode('utf-8').replace('\r\n', '\n')
+
+        return new_text
+
+
 class EventListener(sublime_plugin.EventListener):
     def on_pre_save(self, view):
         view.run_command('auto_yapf')
@@ -62,6 +81,8 @@ class AutoYapfCommand(sublime_plugin.TextCommand):
     def guess_lang(self):
         if self.view.score_selector(0, 'source.python') > 0:
             return 'python'
+        if self.view.score_selector(0, 'source.rust') > 0:
+            return 'rust'
 
     def is_enabled(self):
         return self.guess_lang() is not None
@@ -70,7 +91,12 @@ class AutoYapfCommand(sublime_plugin.TextCommand):
         # determine current text
         selection = sublime.Region(0, self.view.size())
 
-        formatter = YapfFormatter()
+        formatter = {
+            'python': YapfFormatter,
+            'rust': RustFmtFormatter,
+        }[self.guess_lang()]()
         current_text = self.view.substr(selection)
         new_text = formatter.format_text(current_text)
-        self.view.replace(edit, selection, new_text)
+
+        if new_text is not None:
+            self.view.replace(edit, selection, new_text)
