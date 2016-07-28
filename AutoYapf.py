@@ -59,9 +59,12 @@ class EventListener(sublime_plugin.EventListener):
 
 
 class AutoYapfCommand(sublime_plugin.TextCommand):
+    def guess_lang(self):
+        if self.view.score_selector(0, 'source.python') > 0:
+            return 'python'
+
     def is_enabled(self):
-        is_python = self.view.score_selector(0, 'source.python') > 0
-        return is_python
+        return self.guess_lang() is not None
 
     def run(self, edit):
         # determine current text
