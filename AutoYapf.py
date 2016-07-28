@@ -2,6 +2,16 @@ import sublime, sublime_plugin
 import os, subprocess, sys
 
 
+def popen_wincompat(*args, **kwargs):
+    startupinfo = None
+    if sys.platform in ('win32', 'cygwin'):
+        startupinfo = subprocess.STARTUPINFO()
+        startupinfo.dwFlags = subprocess.CREATE_NEW_CONSOLE | subprocess.STARTF_USESHOWWINDOW
+        startupinfo.wShowWindow = subprocess.SW_HIDE
+
+    return subprocess.Popen(*args, startupinfo=startupinfo, **kwargs)
+
+
 class EventListener(sublime_plugin.EventListener):
     def on_pre_save(self, view):
         view.run_command('auto_yapf')
@@ -17,21 +27,18 @@ class AutoYapfCommand(sublime_plugin.TextCommand):
         selection = sublime.Region(0, self.view.size())
         current_text = self.view.substr(selection)
 
-        # run yapf
-        cmd = ['yapf', '--verify']
+        # set language to utf8
         env = os.environ.copy()
         env['LANG'] = 'utf-8'
-        startupinfo = None
-        if sys.platform in ('win32', 'cygwin'):
-            startupinfo = subprocess.STARTUPINFO()
-            startupinfo.dwFlags = subprocess.CREATE_NEW_CONSOLE | subprocess.STARTF_USESHOWWINDOW
-            startupinfo.wShowWindow = subprocess.SW_HIDE
-        popen = subprocess.Popen(cmd,
-                                 env=env,
-                                 stdout=subprocess.PIPE,
-                                 stderr=subprocess.PIPE,
-                                 stdin=subprocess.PIPE,
-                                 startupinfo=startupinfo)
+
+        # run yapf
+        cmd = ['yapf', '--verify']
+
+        popen = popen_wincompat(cmd,
+                                env=env,
+                                stdout=subprocess.PIPE,
+                                stderr=subprocess.PIPE,
+                                stdin=subprocess.PIPE)
 
         stdout, stderr = popen.communicate(current_text.encode('utf-8'))
 
