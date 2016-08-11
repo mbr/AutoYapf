@@ -63,12 +63,12 @@ class RustFmtFormatter(Formatter):
         popen = self.popen(cmd,
                            cwd=os.path.dirname(target),
                            stdout=subprocess.PIPE,
-                           stderr=subprocess.PIPE,
+                           stderr=subprocess.STDOUT,
                            stdin=subprocess.PIPE)
 
-        stdout, stderr = popen.communicate(text.encode('utf8'))
+        stdout, _= popen.communicate(text.encode('utf8'))
         if popen.returncode != 0:
-            raise FormatterError('rustfmt failed: {}'.format(stderr))
+            raise FormatterError('rustfmt failed: {}'.format(stdout))
 
         new_text = stdout.decode('utf-8').replace('\r\n', '\n')
 
@@ -107,5 +107,5 @@ class AutoYapfCommand(sublime_plugin.TextCommand):
         except FormatterError as e:
             print('AutoYapf: Formatter failed: {}'.format(e))
             sublime.status_message(str(e))
-
-        self.view.replace(edit, selection, new_text)
+        else:
+            self.view.replace(edit, selection, new_text)
