@@ -81,6 +81,7 @@ class TidyFormatter(Formatter):
                '-utf8',
                '-q',
                '--clean',
+               'yes',
                '--indent',
                'yes',
                '--indent-spaces',
