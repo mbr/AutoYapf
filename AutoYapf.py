@@ -98,9 +98,11 @@ class TidyFormatter(Formatter):
         stdout, stderr = popen.communicate(text.encode('utf8'))
 
         if stderr:
-            print("TIDY WARNINGS: {}".format(stderr))
+            print("tidy (status: {}) warnings: {}".format(popen.returncode,
+                                                          stderr))
 
-        if popen.returncode != 0:
+        # 0: all good, 1: warnigs, 2: errors
+        if popen.returncode not in (0, 1):
             raise FormatterError('tidy failed: {}'.format(stdout))
 
         # for some reason, tidy adds trailing whitespace after <script>-tags
