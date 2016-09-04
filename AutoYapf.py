@@ -87,6 +87,10 @@ class TidyFormatter(Formatter):
                '--indent-spaces',
                '2',
                '--indent-with-tabs',
+               'no',
+               '--drop-empty-elements',
+               'no',
+               '--drop-empty-paras',
                'no', ]
 
         popen = self.popen(cmd,
