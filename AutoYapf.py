@@ -75,6 +75,34 @@ class RustFmtFormatter(Formatter):
         return new_text
 
 
+class TidyFormatter(Formatter):
+    def format_text(self, text, target):
+        cmd = ['tidy',
+               '-utf8',
+               '-q',
+               '--clean',
+               '--indent',
+               'yes',
+               '--indent-spaces',
+               '2',
+               '--indent-with-tabs',
+               'no', ]
+
+        popen = self.popen(cmd,
+                           cwd=os.path.dirname(target),
+                           stdout=subprocess.PIPE,
+                           stderr=subprocess.STDOUT,
+                           stdin=subprocess.PIPE)
+
+        stdout, _ = popen.communicate(text.encode('utf8'))
+        if popen.returncode != 0:
+            raise FormatterError('tidy failed: {}'.format(stdout))
+
+        new_text = stdout.decode('utf-8')
+
+        return new_text
+
+
 class EventListener(sublime_plugin.EventListener):
     def on_pre_save(self, view):
         view.run_command('auto_yapf')
@@ -86,6 +114,8 @@ class AutoYapfCommand(sublime_plugin.TextCommand):
             return 'python'
         if self.view.score_selector(0, 'source.rust') > 0:
             return 'rust'
+        if self.view.score_selector(0, 'text.html') > 0:
+            return 'html'
 
     def is_enabled(self):
         return self.guess_lang() is not None
@@ -99,6 +129,7 @@ class AutoYapfCommand(sublime_plugin.TextCommand):
         formatter = {
             'python': YapfFormatter,
             'rust': RustFmtFormatter,
+            'html': TidyFormatter,
         }[self.guess_lang()]()
 
         current_text = self.view.substr(selection)
