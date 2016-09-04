@@ -105,7 +105,7 @@ class TidyFormatter(Formatter):
 
         # for some reason, tidy adds trailing whitespace after <script>-tags
         new_text = '\n'.join(line.rstrip()
-                             for line in stdout.decode('utf-8').splitlines)
+                             for line in stdout.decode('utf-8').splitlines())
 
         return new_text
 
