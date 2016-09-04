@@ -66,7 +66,7 @@ class RustFmtFormatter(Formatter):
                            stderr=subprocess.STDOUT,
                            stdin=subprocess.PIPE)
 
-        stdout, _= popen.communicate(text.encode('utf8'))
+        stdout, _ = popen.communicate(text.encode('utf8'))
         if popen.returncode != 0:
             raise FormatterError('rustfmt failed: {}'.format(stdout))
 
