@@ -103,7 +103,9 @@ class TidyFormatter(Formatter):
         if popen.returncode != 0:
             raise FormatterError('tidy failed: {}'.format(stdout))
 
-        new_text = stdout.decode('utf-8')
+        # for some reason, tidy adds trailing whitespace after <script>-tags
+        new_text = '\n'.join(line.rstrip()
+                             for line in stdout.decode('utf-8').splitlines)
 
         return new_text
 
