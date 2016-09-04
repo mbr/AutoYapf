@@ -91,6 +91,8 @@ class TidyFormatter(Formatter):
                '--drop-empty-elements',
                'no',
                '--drop-empty-paras',
+               'no',
+               '--tidy-mark',
                'no', ]
 
         popen = self.popen(cmd,
