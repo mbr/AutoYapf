@@ -92,10 +92,14 @@ class TidyFormatter(Formatter):
         popen = self.popen(cmd,
                            cwd=os.path.dirname(target),
                            stdout=subprocess.PIPE,
-                           stderr=subprocess.STDOUT,
+                           stderr=subprocess.PIPE,
                            stdin=subprocess.PIPE)
 
-        stdout, _ = popen.communicate(text.encode('utf8'))
+        stdout, stderr = popen.communicate(text.encode('utf8'))
+
+        if stderr:
+            print("TIDY WARNINGS: {}".format(stderr))
+
         if popen.returncode != 0:
             raise FormatterError('tidy failed: {}'.format(stdout))
 
