@@ -77,37 +77,60 @@ class RustFmtFormatter(Formatter):
         return new_text
 
 
+class JavaFormatFormatter(Formatter):
+    def format_text(self, text, target):
+        cmd = ['/opt/jars/java-format', '-']
+
+        popen = self.popen(
+            cmd,
+            cwd=os.path.dirname(target),
+            stdout=subprocess.PIPE,
+            stderr=subprocess.STDOUT,
+            stdin=subprocess.PIPE)
+
+        stdout, _ = popen.communicate(text.encode('utf8'))
+        if popen.returncode != 0:
+            raise FormatterError('java-format failed: {}'.format(stdout))
+
+        new_text = stdout.decode('utf-8').replace('\r\n', '\n')
+
+        return new_text
+
+
 class TidyFormatter(Formatter):
     def format_text(self, text, target):
-        cmd = ['tidy',
-               '-utf8',
-               '-q',
-               '--clean',
-               'no',
-               '--indent',
-               'yes',
-               '--indent-spaces',
-               '2',
-               '--indent-with-tabs',
-               'no',
-               '--drop-empty-elements',
-               'no',
-               '--drop-empty-paras',
-               'no',
-               '--tidy-mark',
-               'no', ]
+        cmd = [
+            'tidy',
+            '-utf8',
+            '-q',
+            '--clean',
+            'no',
+            '--indent',
+            'yes',
+            '--indent-spaces',
+            '2',
+            '--indent-with-tabs',
+            'no',
+            '--drop-empty-elements',
+            'no',
+            '--drop-empty-paras',
+            'no',
+            '--tidy-mark',
+            'no',
+        ]
 
-        popen = self.popen(cmd,
-                           cwd=os.path.dirname(target),
-                           stdout=subprocess.PIPE,
-                           stderr=subprocess.PIPE,
-                           stdin=subprocess.PIPE)
+        popen = self.popen(
+            cmd,
+            cwd=os.path.dirname(target),
+            stdout=subprocess.PIPE,
+            stderr=subprocess.PIPE,
+            stdin=subprocess.PIPE)
 
         stdout, stderr = popen.communicate(text.encode('utf8'))
 
         if stderr:
-            print("tidy (status: {}) warnings: {}".format(popen.returncode,
-                                                          stderr))
+            print("tidy (status: {}) warnings: {}".format(
+                popen.returncode, stderr))
 
         # 0: all good, 1: warnigs, 2: errors
         if popen.returncode not in (0, 1):
@@ -127,6 +150,8 @@ class EventListener(sublime_plugin.EventListener):
 
 class AutoYapfCommand(sublime_plugin.TextCommand):
     def guess_lang(self):
+        if self.view.score_selector(0, 'source.java') > 0:
+            return 'java'
         if self.view.score_selector(0, 'source.python') > 0:
             return 'python'
         if self.view.score_selector(0, 'source.rust') > 0:
@@ -144,6 +169,7 @@ class AutoYapfCommand(sublime_plugin.TextCommand):
         selection = sublime.Region(0, self.view.size())
 
         formatter = {
+            'java': JavaFormatFormatter,
             'python': YapfFormatter,
             'rust': RustFmtFormatter,
             'html': TidyFormatter,
