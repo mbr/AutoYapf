@@ -36,10 +36,11 @@ class YapfFormatter(Formatter):
     def format_text(self, text, target):
         cmd = ['yapf', '--verify']
 
-        popen = self.popen(cmd,
-                           stdout=subprocess.PIPE,
-                           stderr=subprocess.PIPE,
-                           stdin=subprocess.PIPE)
+        popen = self.popen(
+            cmd,
+            stdout=subprocess.PIPE,
+            stderr=subprocess.PIPE,
+            stdin=subprocess.PIPE)
 
         stdout, stderr = popen.communicate(text.encode('utf-8'))
 
@@ -60,11 +61,12 @@ class RustFmtFormatter(Formatter):
     def format_text(self, text, target):
         cmd = [os.path.expanduser('~/.cargo/bin/rustfmt'), '--skip-children']
 
-        popen = self.popen(cmd,
-                           cwd=os.path.dirname(target),
-                           stdout=subprocess.PIPE,
-                           stderr=subprocess.STDOUT,
-                           stdin=subprocess.PIPE)
+        popen = self.popen(
+            cmd,
+            cwd=os.path.dirname(target),
+            stdout=subprocess.PIPE,
+            stderr=subprocess.STDOUT,
+            stdin=subprocess.PIPE)
 
         stdout, _ = popen.communicate(text.encode('utf8'))
         if popen.returncode != 0:
