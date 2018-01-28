@@ -143,6 +143,32 @@ class TidyFormatter(Formatter):
         return new_text
 
 
+class ClangFormatFormatter(Formatter):
+    def format_text(self, text, target):
+        cmd = ['/usr/bin/clang-format']
+
+        popen = self.popen(
+            cmd,
+            cwd=os.path.dirname(target),
+            stdout=subprocess.PIPE,
+            stderr=subprocess.STDOUT,
+            stdin=subprocess.PIPE)
+
+        stdout, _ = popen.communicate(text.encode('utf8'))
+        if popen.returncode != 0:
+            raise FormatterError('clang-format failed: {}'.format(stdout))
+
+        new_text = stdout.decode('utf-8').replace('\r\n', '\n')
+
+        return new_text
+
+
+class NoopFormatter(Formatter):
+    def format_text(self, text, target):
+        print('Not reformatting, cannot find appropriate formatter')
+        return text
+
+
 class EventListener(sublime_plugin.EventListener):
     def on_pre_save(self, view):
         view.run_command('auto_yapf')
@@ -158,6 +184,8 @@ class AutoYapfCommand(sublime_plugin.TextCommand):
             return 'rust'
         if self.view.score_selector(0, 'text.html') > 0:
             return 'html'
+        if self.view.score_selector(0, 'source.c++') > 0:
+            return 'c++'
 
     def is_enabled(self):
         return self.guess_lang() is not None
@@ -173,6 +201,8 @@ class AutoYapfCommand(sublime_plugin.TextCommand):
             'python': YapfFormatter,
             'rust': RustFmtFormatter,
             'html': TidyFormatter,
+            'c++': ClangFormatFormatter,
+            None: NoopFormatter,
         }[self.guess_lang()]()
 
         current_text = self.view.substr(selection)
