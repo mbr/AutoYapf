@@ -59,7 +59,7 @@ class YapfFormatter(Formatter):
 
 class RustFmtFormatter(Formatter):
     def format_text(self, text, target):
-        cmd = [os.path.expanduser('~/.cargo/bin/rustfmt'), '--skip-children']
+        cmd = ['rustfmt', '--skip-children']
 
         popen = self.popen(
             cmd,
