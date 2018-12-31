@@ -7,6 +7,8 @@ import sublime_plugin
 
 # FIXME: rename, as autoyapf is no longer accurate
 
+CONFIGURATION_KEY = 'autoyapf_enabled'
+
 
 class FormatterError(Exception):
     pass
@@ -192,7 +194,17 @@ class NoopFormatter(Formatter):
 
 class EventListener(sublime_plugin.EventListener):
     def on_pre_save(self, view):
-        view.run_command('auto_yapf')
+        enabled = view.settings().get(CONFIGURATION_KEY)
+        # FIXME: Use a global settings to file to set the default.
+        if enabled is None:
+            enabled = True
+
+        if enabled:
+            view.run_command('auto_yapf')
+        else:
+            print(
+                'Not running AutoYapf, as it is disabled through the "{}"setting'.
+                format(CONFIGURATION_KEY))
 
 
 class AutoYapfCommand(sublime_plugin.TextCommand):
