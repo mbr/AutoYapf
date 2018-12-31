@@ -59,18 +59,19 @@ class YapfFormatter(Formatter):
 
 class RustFmtFormatter(Formatter):
     def format_text(self, text, target):
-        cmd = ['rustfmt', '--skip-children']
+        cmd = [os.path.expanduser('~/.cargo/bin/rustfmt')]
 
         popen = self.popen(
             cmd,
             cwd=os.path.dirname(target),
             stdout=subprocess.PIPE,
-            stderr=subprocess.STDOUT,
+            stderr=subprocess.PIPE,
             stdin=subprocess.PIPE)
 
-        stdout, _ = popen.communicate(text.encode('utf8'))
+        stdout, stderr = popen.communicate(text.encode('utf8'))
         if popen.returncode != 0:
-            raise FormatterError('rustfmt failed: {}'.format(stdout))
+            raise FormatterError('rustfmt failed: {}'.format(
+                stderr.decode('utf8')))
 
         new_text = stdout.decode('utf-8').replace('\r\n', '\n')
 
