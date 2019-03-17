@@ -203,8 +203,8 @@ class EventListener(sublime_plugin.EventListener):
             view.run_command('auto_yapf')
         else:
             print(
-                'Not running AutoYapf, as it is disabled through the "{}"setting'.
-                format(CONFIGURATION_KEY))
+                'Not running AutoYapf, as it is disabled through the "{}"setting'
+                .format(CONFIGURATION_KEY))
 
 
 class AutoYapfCommand(sublime_plugin.TextCommand):
