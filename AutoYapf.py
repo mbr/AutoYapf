@@ -81,7 +81,7 @@ class BlackFormatter(Formatter):
 
 class RustFmtFormatter(Formatter):
     def format_text(self, text, target):
-        cmd = [os.path.expanduser("~/.cargo/bin/rustfmt")]
+        cmd = [os.path.expanduser("~/.cargo/bin/rustfmt"), "--edition", "2018"]
 
         popen = self.popen(
             cmd,
